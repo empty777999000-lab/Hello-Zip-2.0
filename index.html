@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staking Pro | DeFi Dashboard</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#050505] text-white font-sans antialiased overflow-x-hidden">
+
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="blob bg-green-500/10 w-[500px] h-[500px] absolute top-[-10%] left-[-10%] rounded-full blur-[100px] animate-pulse-slow"></div>
+        <div class="blob bg-blue-600/10 w-[400px] h-[400px] absolute bottom-[-10%] right-[-10%] rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+    </div>
+
+    <div class="relative z-10 container mx-auto px-4 py-6 max-w-[480px] min-h-screen flex flex-col justify-center">
+        
+        <div class="flex justify-between items-center mb-8 animate__animated animate__fadeInDown">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-green-400 to-emerald-600 shadow-[0_0_15px_rgba(52,211,153,0.4)] flex items-center justify-center">
+                    <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h1 class="text-lg font-bold tracking-tight text-white">STAKING<span class="text-green-400">.IO</span></h1>
+            </div>
+            
+            <button id="connectBtn" class="glass-btn px-4 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider hover:bg-green-500 hover:text-black transition-all duration-300 border border-white/10">
+                Connect Wallet
+            </button>
+        </div>
+
+        <div class="glass-card p-6 rounded-[32px] mb-6 animate__animated animate__zoomIn">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Total Staked Balance</span>
+                <div class="flex items-center gap-1.5 px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">
+                    <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div>
+                    <span class="text-[9px] font-bold text-green-400 uppercase">Live Earning</span>
+                </div>
+            </div>
+            
+            <div class="flex items-baseline gap-2 mb-6">
+                <span id="stakedBal" class="text-5xl font-mono font-bold text-white tracking-tighter">0.0000</span>
+                <span class="text-sm font-bold text-gray-400 asset-symbol">USDT</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-[#0a0a0a]/50 p-3 rounded-2xl border border-white/5">
+                    <p class="text-[9px] text-gray-500 font-bold uppercase mb-1">Fixed APY</p>
+                    <p class="text-green-400 font-mono font-bold text-sm">120.00%</p>
+                </div>
+                <div class="bg-[#0a0a0a]/50 p-3 rounded-2xl border border-white/5">
+                    <p class="text-[9px] text-gray-500 font-bold uppercase mb-1">Lock Period</p>
+                    <p class="text-blue-400 font-mono font-bold text-sm">24 Hours</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-[32px] animate__animated animate__fadeInUp delay-100">
+            
+            <div class="relative mb-6">
+                <button id="dropdownBtn" class="w-full bg-[#0a0a0a]/60 hover:bg-[#1a1a1a] p-4 rounded-2xl flex justify-between items-center border border-white/5 transition-all group">
+                    <div class="flex items-center gap-3">
+                        <img id="currIcon" src="https://cryptologos.cc/logos/tether-usdt-logo.png" class="w-6 h-6 rounded-full shadow-lg">
+                        <span id="currName" class="font-bold text-sm text-gray-200">My Test USDT</span>
+                    </div>
+                    <svg class="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="dropdownMenu" class="hidden absolute top-full mt-2 w-full bg-[#111] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl"></div>
+            </div>
+
+            <div class="bg-[#050505]/80 p-5 rounded-3xl border border-white/5 mb-6 focus-within:border-green-500/30 transition-colors">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase">Amount to Stake</span>
+                    <div class="flex gap-2">
+                        <button data-p="0.25" class="perc-btn">25%</button>
+                        <button data-p="0.5" class="perc-btn">50%</button>
+                        <button id="maxBtn" class="perc-btn text-green-400 border-green-500/20 hover:bg-green-500/10">MAX</button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <input type="number" id="stakeAmount" placeholder="0.0" class="w-full bg-transparent text-3xl font-mono font-bold text-white outline-none placeholder:text-gray-800">
+                    <span class="text-xs font-bold text-gray-600 bg-white/5 px-2 py-1 rounded-lg asset-symbol">USDT</span>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
+                    <span class="text-[10px] text-gray-500">Wallet Balance</span>
+                    <span class="text-[10px] font-mono text-gray-300">
+                        <span id="userBalDisplay">0.00</span> <span class="asset-symbol text-gray-500">USDT</span>
+                    </span>
+                </div>
+            </div>
+
+            <button id="stakeBtn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-[#4ade80] to-[#22c55e] text-[#022c22] font-black text-xs uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(74,222,128,0.3)] hover:shadow-[0_0_30px_rgba(74,222,128,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 mb-4">
+                Stake Assets
+            </button>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button id="unstakeBtn" class="py-3.5 rounded-2xl border border-white/5 bg-white/[0.02] text-gray-400 hover:text-white hover:bg-white/5 font-bold text-[10px] uppercase tracking-wider transition-all">
+                    Unstake
+                </button>
+                <button id="claimBtn" class="py-3.5 rounded-2xl border border-white/5 bg-white/[0.02] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 hover:border-blue-500/20 font-bold text-[10px] uppercase tracking-wider transition-all">
+                    Claim Rewards
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-8 text-center opacity-30 hover:opacity-100 transition-opacity duration-500">
+            <p class="text-[10px] text-gray-500 flex justify-center items-center gap-2">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+                Secured by Smart Contract
+            </p>
+        </div>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+    <script  src="./script.js"></script>
+
+  </body>
+  
+</html>

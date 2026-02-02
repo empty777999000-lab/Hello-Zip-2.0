@@ -1,0 +1,93 @@
+/* Base Font Settings */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #050505;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Glassmorphism Effect for Cards */
+.glass-card {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Glass Button Style */
+.glass-btn {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+}
+
+/* Input Field Clean up (Removes spinners) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Percentage Buttons (25%, 50%) */
+.perc-btn {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #888;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.perc-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* SweetAlert Dark Theme Customization */
+.swal2-popup {
+    background: #111 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 24px !important;
+    color: #fff !important;
+    padding: 2em !important;
+}
+
+.swal2-title {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 1.2em !important;
+}
+
+.swal2-content {
+    font-family: 'Inter', sans-serif !important;
+    color: #aaa !important;
+}
+
+/* Background Blob Animation */
+@keyframes pulse-slow {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 8s infinite ease-in-out;
+}
+
+/* Scrollbar styling for dropdown */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #111;
+}
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4ade80;
+}
