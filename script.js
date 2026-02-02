@@ -299,4 +299,4 @@ function notify(title, text, icon) {
             popup: 'rounded-3xl border border-white/10 shadow-2xl'
         }
     });
-}
+        }
