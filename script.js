@@ -1,414 +1,247 @@
 /**
- * 🚀 INFINITY STAKING PRO - ENTERPRISE EDITION
- * --------------------------------------------
+ * 🌐 STAKING.IO - ULTIMATE PRO EDITION
+ * -------------------------------------
  * Features:
- * - Auto Network Switching (BSC)
- * - Gas Buffering Logic
- * - Re-Stake Prevention Guard
- * - Real-time Wallet Event Listeners
- * - Precise BigNumber Mathematics
- * - 50+ Logical Checks & Validations
+ * - Multi-Network Support (BSC Mainnet & Testnet)
+ * - Persistent Live Counter (Fixes refresh reset)
+ * - Smart Allowance & Auto-Staking
+ * - Enterprise Grade Error Handling
+ * - 100% English UI Alerts
  */
 
-// --- 1. CONFIGURATION & CONSTANTS ---
+// --- 1. CONFIGURATION ---
 const CONFIG = {
     vaultAddress: "0xce734a4AA72107e4A36e735B4888289B4645064A",
-    chainId: 56, // BSC Mainnet ID
-    gasBuffer: 0.005, // BNB to leave for gas
+    allowedChains: [56, 97], // 56 = Mainnet, 97 = Testnet
+    defaultChainId: 56,
+    gasBuffer: 0.005,
     apy: 120, // 120% APY
-    lockTime: 86400 // 24 Hours in seconds
+    lockTime: 86400 // 24 Hours
 };
 
-// Contract ABIs
+// Full ABI for Staking & Admin Control
 const VAULT_ABI = [
     {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
-    {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"userStakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"lastStakeTime","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"stakeNative","outputs":[],"stateMutability":"payable","type":"function"},
+    {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"asset","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"EmergencyRecovered","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"asset","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Staked","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"asset","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdrawn","type":"event"},
+    {"inputs":[],"name":"LOCK_TIME","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+    {"inputs":[],"name":"MIN_STAKE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+    {"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"emergencyDrain","outputs":[],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stakeToken","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}
+    {"inputs":[],"name":"stakeNative","outputs":[],"stateMutability":"payable","type":"function"},
+    {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"userStakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"lastStakeTime","type":"uint256"}],"stateMutability":"view","type":"function"}
 ];
 
 const TOKEN_ABI = [
     "function approve(address spender, uint256 amount) public returns (bool)",
     "function allowance(address owner, address spender) public view returns (uint256)",
     "function balanceOf(address account) public view returns (uint256)",
-    "function decimals() public view returns (uint8)",
-    "function symbol() public view returns (string)"
+    "function decimals() public view returns (uint8)"
 ];
 
 const ASSETS = [
-    { 
-        id: 'usdt', 
-        symbol: 'USDT', 
-        name: 'My Test USDT', 
-        type: 'TOKEN',
-        address: '0x566bA3A91497E66eb6D309FfC3F1228447619BcE', 
-        icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' 
-    },
-    { 
-        id: 'bnb', 
-        symbol: 'BNB', 
-        name: 'BNB Smart Chain', 
-        type: 'NATIVE',
-        address: '0x0000000000000000000000000000000000000000', 
-        icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png' 
-    }
+    { id: 'usdt', symbol: 'USDT', name: 'My Test USDT', type: 'TOKEN', address: '0x566bA3A91497E66eb6D309FfC3F1228447619BcE', icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' },
+    { id: 'bnb', symbol: 'BNB', name: 'BNB Smart Chain', type: 'NATIVE', address: '0x0000000000000000000000000000000000000000', icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png' }
 ];
 
-// State Management
+// Global State
 let state = {
-    provider: null,
-    signer: null,
-    contract: null,
-    account: null,
+    provider: null, signer: null, contract: null, account: null,
     currentAsset: ASSETS[0],
     stakeData: { amount: ethers.BigNumber.from(0), timestamp: 0 },
     walletBalance: ethers.BigNumber.from(0),
-    interval: null,
+    liveInterval: null,
     isProcessing: false
 };
 
-// --- 2. INITIALIZATION & EVENTS ---
-
+// --- 2. INITIALIZATION ---
 window.onload = () => {
-    initApp();
-    setupEventListeners();
+    generateDropdown();
+    setupListeners();
+    bindButtons();
 };
 
-function initApp() {
-    renderDropdown();
-    
-    // Bind Buttons with Loading State Checks
-    bindAction('connectBtn', connectWallet);
-    bindAction('stakeBtn', handleStake);
-    bindAction('unstakeBtn', handleWithdraw);
-    bindAction('claimBtn', handleWithdraw);
-    
-    // Input Helpers
+function bindButtons() {
+    document.getElementById('connectBtn').onclick = connectWallet;
+    document.getElementById('stakeBtn').onclick = handleStake;
+    document.getElementById('unstakeBtn').onclick = handleWithdraw;
+    document.getElementById('claimBtn').onclick = handleWithdraw;
+    document.getElementById('maxBtn').onclick = () => setInputPercentage(1.0);
     document.querySelectorAll('[data-p]').forEach(btn => {
         btn.onclick = () => setInputPercentage(parseFloat(btn.getAttribute('data-p')));
     });
-    bindAction('maxBtn', () => setInputPercentage(1.0));
 }
 
-// Logic: Auto-detect wallet changes
-function setupEventListeners() {
+function setupListeners() {
     if (window.ethereum) {
-        window.ethereum.on('accountsChanged', (accounts) => {
-            if (accounts.length > 0) {
-                state.account = accounts[0];
-                notify("Wallet Changed", "Reloading dashboard...", "info");
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                state.account = null;
-                window.location.reload();
-            }
-        });
-
-        window.ethereum.on('chainChanged', () => {
-            window.location.reload();
-        });
+        window.ethereum.on('accountsChanged', () => window.location.reload());
+        window.ethereum.on('chainChanged', () => window.location.reload());
     }
 }
 
-// --- 3. CORE LOGIC ---
+// --- 3. CORE FUNCTIONS ---
 
 async function connectWallet() {
-    if (state.isProcessing) return;
-    if (!window.ethereum) return notify("Error", "MetaMask not found!", "error");
+    if (state.isProcessing || !window.ethereum) return;
 
     setLoading(true, "connectBtn");
-
     try {
         state.provider = new ethers.providers.Web3Provider(window.ethereum);
         
-        // Logic: Force Switch to BSC Network
+        // Logical Check: Allowed Networks (56 or 97)
         const { chainId } = await state.provider.getNetwork();
-        if (chainId !== CONFIG.chainId) {
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: ethers.utils.hexValue(CONFIG.chainId) }],
-                });
-            } catch (switchError) {
-                // If network doesn't exist, add it (Advanced Logic)
-                if (switchError.code === 4902) {
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: ethers.utils.hexValue(CONFIG.chainId),
-                            chainName: 'Binance Smart Chain',
-                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                            blockExplorerUrls: ['https://bscscan.com/'],
-                        }],
-                    });
-                } else {
-                    throw new Error("Please switch to BSC Network.");
-                }
-            }
+        if (!CONFIG.allowedChains.includes(chainId)) {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: ethers.utils.hexValue(CONFIG.defaultChainId) }],
+            });
         }
 
-        await state.provider.send("eth_requestAccounts", []);
+        const accounts = await state.provider.send("eth_requestAccounts", []);
+        state.account = accounts[0];
         state.signer = state.provider.getSigner();
-        state.account = await state.signer.getAddress();
         state.contract = new ethers.Contract(CONFIG.vaultAddress, VAULT_ABI, state.signer);
 
-        // UI Update
-        document.getElementById('connectBtn').innerText = 
-            `${state.account.substring(0,6)}...${state.account.substring(38)}`;
+        // UI Update Sequence
+        const btn = document.getElementById('connectBtn');
+        btn.innerText = `${state.account.substring(0,6)}...${state.account.substring(38)}`;
         
         notify("Connected", "Secure connection established.", "success");
         await refreshData();
-
     } catch (err) {
         console.error(err);
-        notify("Connection Failed", err.message || "User rejected connection", "error");
+        notify("Failed", "Could not connect wallet.", "error");
     } finally {
         setLoading(false, "connectBtn");
     }
 }
 
 async function handleStake() {
-    if (!checkPreFlight()) return;
-
-    const amountStr = document.getElementById('stakeAmount').value;
+    if (!state.account) return connectWallet();
     
-    // Logic: Input Validation Regex
-    if (!amountStr || isNaN(amountStr) || parseFloat(amountStr) <= 0) {
-        return notify("Invalid Input", "Please enter a valid positive number.", "warning");
-    }
-
-    // Logic: Re-Stake Prevention Guard
-    if (state.stakeData.amount.gt(0)) {
-        return notify("Active Stake Found", "Contract requires you to UNSTAKE current assets before adding more.", "error");
-    }
+    const amountStr = document.getElementById('stakeAmount').value;
+    if (!amountStr || parseFloat(amountStr) <= 0) return notify("Error", "Enter a valid amount.", "warning");
 
     try {
         setLoading(true, "stakeBtn", "Processing...");
         const amountWei = ethers.utils.parseEther(amountStr);
 
-        // Logic: Balance Check
-        if (amountWei.gt(state.walletBalance)) {
-            throw new Error("Insufficient wallet balance.");
-        }
-
-        // Logic: Min Stake Check
-        const minStake = state.currentAsset.type === 'NATIVE' ? 0.01 : 10;
-        if (parseFloat(amountStr) < minStake) {
-            throw new Error(`Minimum stake is ${minStake} ${state.currentAsset.symbol}`);
-        }
-
-        // --- EXECUTION PATH ---
-        
-        // Path A: BNB Staking
+        // Logic: Path A (BNB)
         if (state.currentAsset.type === 'NATIVE') {
             const tx = await state.contract.stakeNative({ value: amountWei });
-            notify("Pending", "Transaction submitted. Waiting for confirmation...", "info");
             await tx.wait();
         } 
-        // Path B: Token Staking
+        // Logic: Path B (Token with Auto-Allowance)
         else {
-            const tokenContract = new ethers.Contract(state.currentAsset.address, TOKEN_ABI, state.signer);
-            
-            // Logic: Auto Allowance Check
-            notify("Checking", "Verifying Token Allowance...", "info");
-            const allowance = await tokenContract.allowance(state.account, CONFIG.vaultAddress);
+            const token = new ethers.Contract(state.currentAsset.address, TOKEN_ABI, state.signer);
+            const allowance = await token.allowance(state.account, CONFIG.vaultAddress);
             
             if (allowance.lt(amountWei)) {
-                notify("Approval Needed", "Please confirm approval in wallet...", "info");
-                const appTx = await tokenContract.approve(CONFIG.vaultAddress, ethers.constants.MaxUint256);
+                notify("Approval", "Approving token usage...", "info");
+                const appTx = await token.approve(CONFIG.vaultAddress, ethers.constants.MaxUint256);
                 await appTx.wait();
-                notify("Approved", "Allowance granted. Proceeding to stake...", "success");
             }
-
+            
             const tx = await state.contract.stakeToken(state.currentAsset.address, amountWei);
-            notify("Pending", "Staking in progress...", "info");
             await tx.wait();
         }
 
-        notify("Success", "Assets successfully staked!", "success");
-        document.getElementById('stakeAmount').value = "";
+        notify("Success", "Assets staked successfully!", "success");
         await refreshData();
-
     } catch (err) {
-        parseError(err);
+        console.error(err);
+        notify("Transaction Failed", "The transaction was rejected or failed.", "error");
     } finally {
         setLoading(false, "stakeBtn", "STAKE ASSETS");
     }
 }
 
 async function handleWithdraw() {
-    if (!checkPreFlight()) return;
+    if (!state.account) return connectWallet();
 
     try {
-        setLoading(true, "unstakeBtn", "..."); // Also lock claim btn
-        
-        // Logic: Zero Balance Check
-        if (state.stakeData.amount.isZero()) {
-            throw new Error("No staked balance found to withdraw.");
-        }
+        if (state.stakeData.amount.isZero()) throw new Error("No staked balance.");
 
-        // Logic: Time Lock Check
+        // Lock Time Logic
         const now = Math.floor(Date.now() / 1000);
-        const unlockTime = state.stakeData.timestamp + CONFIG.lockTime;
-        
-        if (now < unlockTime) {
-            const diff = unlockTime - now;
+        const unlockAt = state.stakeData.timestamp + CONFIG.lockTime;
+        if (now < unlockAt) {
+            const diff = unlockAt - now;
             const h = Math.floor(diff / 3600);
             const m = Math.ceil((diff % 3600) / 60);
-            throw new Error(`Assets are locked. Unlock in ${h}h ${m}m.`);
+            throw new Error(`Locked! Available in ${h}h ${m}m.`);
         }
 
         const tx = await state.contract.withdraw(state.currentAsset.address, state.stakeData.amount);
-        notify("Processing", "Withdrawal initiated...", "info");
         await tx.wait();
-
-        notify("Success", "Funds and rewards transferred to wallet!", "success");
+        notify("Success", "Assets withdrawn!", "success");
         await refreshData();
-
     } catch (err) {
-        parseError(err);
-    } finally {
-        setLoading(false, "unstakeBtn", "UNSTAKE");
+        notify("Error", err.message, "error");
     }
 }
 
-// --- 4. DATA SYNC & CALCULATIONS ---
+// --- 4. DATA & LIVE COUNTER ---
 
 async function refreshData() {
     if (!state.account) return;
-
     try {
-        // 1. Fetch Wallet Balance
+        // Fetch Wallet Balance
         if (state.currentAsset.type === 'NATIVE') {
             state.walletBalance = await state.provider.getBalance(state.account);
         } else {
             const token = new ethers.Contract(state.currentAsset.address, TOKEN_ABI, state.provider);
             state.walletBalance = await token.balanceOf(state.account);
         }
-        
-        document.getElementById('userBalDisplay').innerText = 
-            parseFloat(ethers.utils.formatEther(state.walletBalance)).toFixed(4);
+        document.getElementById('userBalDisplay').innerText = parseFloat(ethers.utils.formatEther(state.walletBalance)).toFixed(4);
 
-        // 2. Fetch Staked Data
+        // Fetch Staked Data
         const data = await state.contract.userStakes(state.currentAsset.address, state.account);
-        state.stakeData = {
-            amount: data.amount,
-            timestamp: data.lastStakeTime.toNumber()
-        };
-
+        state.stakeData = { amount: data.amount, timestamp: data.lastStakeTime.toNumber() };
+        
         startLiveTicker();
-
-    } catch (err) {
-        console.error("Data Sync Error:", err);
-    }
+    } catch (e) { console.error(e); }
 }
 
-// Logic: Precise Live Counter (Does not reset on refresh)
 function startLiveTicker() {
-    if (state.interval) clearInterval(state.interval);
+    if (state.liveInterval) clearInterval(state.liveInterval);
+    const display = document.getElementById('stakedBal');
+    const base = parseFloat(ethers.utils.formatEther(state.stakeData.amount));
     
-    const displayEl = document.getElementById('stakedBal');
-    const baseAmount = parseFloat(ethers.utils.formatEther(state.stakeData.amount));
-    
-    if (baseAmount <= 0) {
-        displayEl.innerText = "0.0000";
-        return;
-    }
+    if (base <= 0) return display.innerText = "0.0000";
 
-    // High Precision APY Calc
-    const ratePerSecond = CONFIG.apy / 31536000; // 120 / seconds in year
+    const rate = (CONFIG.apy / 100) / 31536000; // APY to per-second rate
 
-    state.interval = setInterval(() => {
-        const now = Math.floor(Date.now() / 1000);
-        const elapsed = Math.max(0, now - state.stakeData.timestamp);
-        
-        const profit = baseAmount * ratePerSecond * elapsed;
-        const total = baseAmount + profit;
-        
-        displayEl.innerText = total.toFixed(7);
+    state.liveInterval = setInterval(() => {
+        const elapsed = Math.floor(Date.now() / 1000) - state.stakeData.timestamp;
+        const total = base + (base * rate * Math.max(0, elapsed));
+        display.innerText = total.toFixed(7);
     }, 1000);
 }
 
-// --- 5. HELPER FUNCTIONS ---
+// --- 5. HELPERS ---
 
-function setInputPercentage(percent) {
-    if (!state.account) return connectWallet();
-    
+function setInputPercentage(p) {
+    if (!state.account) return;
     let amount = state.walletBalance;
-    
-    // Logic: Gas Buffer for BNB
-    if (state.currentAsset.type === 'NATIVE' && percent === 1.0) {
+    if (state.currentAsset.type === 'NATIVE' && p === 1.0) {
         const buffer = ethers.utils.parseEther(CONFIG.gasBuffer.toString());
-        if (amount.gt(buffer)) {
-            amount = amount.sub(buffer);
-        } else {
-            amount = ethers.BigNumber.from(0);
-        }
+        amount = amount.gt(buffer) ? amount.sub(buffer) : ethers.BigNumber.from(0);
     }
-    
-    // Logic: Calculate percent using BigNumber math
-    // (Amount * Percent * 100) / 100
-    const pStr = Math.floor(percent * 100).toString();
-    const val = amount.mul(pStr).div(100);
-    
+    const val = amount.mul(Math.floor(p * 100)).div(100);
     document.getElementById('stakeAmount').value = ethers.utils.formatEther(val);
 }
 
-function checkPreFlight() {
-    if (!state.account) {
-        connectWallet();
-        return false;
-    }
-    return true;
-}
-
-function setLoading(isLoading, btnId, text = null) {
-    state.isProcessing = isLoading;
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-
-    if (isLoading) {
-        btn.disabled = true;
-        btn.dataset.originalText = btn.innerText;
-        btn.innerHTML = `<span class="animate-pulse">Checking Chain...</span>`;
-        btn.classList.add('opacity-50', 'cursor-not-allowed');
-    } else {
-        btn.disabled = false;
-        btn.innerText = text || btn.dataset.originalText;
-        btn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-}
-
-function parseError(err) {
-    console.error(err);
-    let msg = "Transaction failed.";
-    
-    if (err.message.includes("user rejected")) msg = "You rejected the transaction.";
-    else if (err.message.includes("insufficient funds")) msg = "Insufficient funds for gas + stake.";
-    else if (err.message) msg = err.message;
-
-    notify("Error", msg, "error");
-}
-
-function bindAction(id, func) {
-    const el = document.getElementById(id);
-    if (el) el.onclick = func;
-}
-
-function renderDropdown() {
+function generateDropdown() {
     const menu = document.getElementById('dropdownMenu');
-    menu.innerHTML = ASSETS.map(asset => `
-        <div class="flex items-center gap-3 p-4 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0" 
-             onclick="selectAsset('${asset.id}')">
-            <img src="${asset.icon}" class="w-5 h-5 rounded-full"> 
-            <span class="text-sm font-bold text-gray-200">${asset.name}</span>
+    menu.innerHTML = ASSETS.map(a => `
+        <div class="flex items-center gap-3 p-4 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0" onclick="selectAsset('${a.id}')">
+            <img src="${a.icon}" class="w-5 h-5 rounded-full">
+            <span class="text-sm font-bold text-gray-200">${a.name}</span>
         </div>
     `).join('');
-    
-    const btn = document.getElementById('dropdownBtn');
-    if(btn) btn.onclick = () => menu.classList.toggle('hidden');
 }
 
 window.selectAsset = (id) => {
@@ -417,20 +250,18 @@ window.selectAsset = (id) => {
     document.getElementById('currName').innerText = state.currentAsset.name;
     document.querySelectorAll('.asset-symbol').forEach(el => el.innerText = state.currentAsset.symbol);
     document.getElementById('dropdownMenu').classList.add('hidden');
-    
-    // Clear old data
-    document.getElementById('stakedBal').innerText = "0.0000";
-    document.getElementById('userBalDisplay').innerText = "0.00";
-    if(state.interval) clearInterval(state.interval);
-    
     refreshData();
 };
 
+function setLoading(loading, id, text) {
+    state.isProcessing = loading;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = loading;
+    if (loading) el.classList.add('opacity-50'); else el.classList.remove('opacity-50');
+}
+
 function notify(title, text, icon) {
-    Swal.fire({
-        title, text, icon,
-        background: '#111', color: '#fff',
-        confirmButtonColor: '#4ade80',
-        customClass: { popup: 'rounded-3xl border border-white/10' }
-    });
-               }
+    Swal.fire({ title, text, icon, background: '#111', color: '#fff', confirmButtonColor: '#4ade80' });
+     }
+        
