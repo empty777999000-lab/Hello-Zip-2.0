@@ -40,7 +40,7 @@ const ASSETS = [
     { 
         id: 'usdt', 
         symbol: 'USDT', 
-        name: 'My Test USDT', 
+        name: 'USDT', 
         type: 'TOKEN', 
         address: '0x566bA3A91497E66eb6D309FfC3F1228447619BcE', 
         icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png' 
