@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staking.io | Secure Admin Command Center</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #050505; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .admin-card { background: rgba(15, 15, 15, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen pb-20">
+
+    <nav class="border-b border-white/5 bg-black/50 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.5)]"></div>
+                <h1 class="font-black text-lg tracking-tighter">SECURE <span class="text-red-600">ADMIN</span></h1>
+            </div>
+            <button id="connectBtn" class="bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold px-5 py-2.5 rounded-full transition-all uppercase tracking-widest">
+                Connect Owner Wallet
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-6 mt-10">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="admin-card p-6 rounded-3xl">
+                <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Vault BNB Balance</p>
+                <h3 id="bnbBal" class="text-2xl font-bold mono text-yellow-500">0.0000</h3>
+            </div>
+            <div class="admin-card p-6 rounded-3xl">
+                <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Vault USDT Balance</p>
+                <h3 id="tokenBal" class="text-2xl font-bold mono text-green-500">0.0000</h3>
+            </div>
+            <div class="admin-card p-6 rounded-3xl">
+                <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">System Status</p>
+                <h3 id="statusText" class="text-xl font-bold uppercase text-blue-500">Syncing...</h3>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="admin-card p-8 rounded-[32px]">
+                <h4 class="text-sm font-bold mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    Reward Settings
+                </h4>
+                <p class="text-xs text-gray-500 mb-6">Update the Annual Percentage Yield for all pools instantly.</p>
+                <div class="flex flex-col gap-3">
+                    <input type="number" id="apyInput" placeholder="New APY %" class="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:border-blue-500 outline-none transition-all">
+                    <button onclick="updateAPY()" class="bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all">Update APY</button>
+                </div>
+            </div>
+
+            <div class="admin-card p-8 rounded-[32px]">
+                <h4 class="text-sm font-bold mb-4 flex items-center gap-2 text-yellow-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    Operational Control
+                </h4>
+                <p class="text-xs text-gray-500 mb-6">Pause deposits and withdrawals in case of emergency or maintenance.</p>
+                <div class="flex flex-col gap-3">
+                    <button id="pauseBtn" onclick="togglePause()" class="py-4 border border-yellow-500/30 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-2xl font-bold text-xs uppercase tracking-widest transition-all">
+                        Toggle System Pause
+                    </button>
+                    <p class="text-[9px] text-center text-gray-600 italic mt-2">Current Status is reflected in the top dashboard.</p>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 bg-red-900/5 border border-red-500/20 p-8 rounded-[32px] mt-4">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-3 bg-red-600/20 rounded-2xl"><svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                    <div>
+                        <h3 class="font-bold text-red-500">CRITICAL WITHDRAWAL ZONE</h3>
+                        <p class="text-xs text-red-500/60 font-medium">Instantly recover all assets from the contract to your owner wallet.</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="drainBNB()" class="group py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-red-900/20 transition-all flex flex-col items-center justify-center gap-1">
+                        <span>Drain All BNB</span>
+                        <span class="text-[8px] opacity-60 font-normal">Native Network Coin</span>
+                    </button>
+                    <button onclick="drainToken()" class="group py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-red-900/20 transition-all flex flex-col items-center justify-center gap-1">
+                        <span>Drain All USDT</span>
+                        <span class="text-[8px] opacity-60 font-normal">Connected Asset Token</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const CONFIG = {
+            vaultAddress: "0xce734a4AA72107e4A36e735B4888289B4645064A",
+            usdtAddress: "0x566bA3A91497E66eb6D309FfC3F1228447619BcE"
+        };
+
+        const ADMIN_ABI = [
+            "function setAPY(uint256 _newAPY) external",
+            "function setPause(bool _status) external",
+            "function emergencyDrain(address token) external",
+            "function emergencyDrainBNB() external",
+            "function isPaused() public view returns (bool)",
+            "function owner() public view returns (address)",
+            // Gas estimation helpers
+            "function estimateGas.setAPY(uint256) external view returns (uint256)",
+            "function estimateGas.emergencyDrain(address) external view returns (uint256)"
+        ];
+        
+        const TOKEN_ABI = ["function balanceOf(address) view returns (uint256)"];
+
+        let provider, signer, contract, adminAccount;
+
+        document.getElementById('connectBtn').onclick = async () => {
+            if (!window.ethereum) return notify("Error", "MetaMask not detected!", "error");
+            
+            try {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                const accounts = await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                adminAccount = accounts[0];
+                
+                contract = new ethers.Contract(CONFIG.vaultAddress, ADMIN_ABI, signer);
+                
+                // 🔥 CRITICAL: Ownership Check
+                const owner = await contract.owner();
+                if (owner.toLowerCase() !== adminAccount.toLowerCase()) {
+                    return Swal.fire({
+                        title: "Unauthorized",
+                        text: "Access denied! This wallet is not the contract owner.",
+                        icon: "error",
+                        background: "#111", color: "#fff"
+                    });
+                }
+                
+                document.getElementById('connectBtn').innerText = `OWNER: ${adminAccount.substring(0,6)}...`;
+                document.getElementById('connectBtn').classList.replace('bg-red-600', 'bg-green-600');
+                
+                notify("Verified", "Admin access granted.", "success");
+                fetchStats();
+            } catch (e) {
+                handleError(e);
+            }
+        };
+
+        async function fetchStats() {
+            try {
+                // BNB Balance
+                const bnb = await provider.getBalance(CONFIG.vaultAddress);
+                document.getElementById('bnbBal').innerText = parseFloat(ethers.utils.formatEther(bnb)).toFixed(4);
+
+                // USDT Balance
+                const token = new ethers.Contract(CONFIG.usdtAddress, TOKEN_ABI, provider);
+                const tBal = await token.balanceOf(CONFIG.vaultAddress);
+                document.getElementById('tokenBal').innerText = parseFloat(ethers.utils.formatEther(tBal)).toFixed(4);
+
+                // Pause Status
+                const paused = await contract.isPaused();
+                const statusEl = document.getElementById('statusText');
+                statusEl.innerText = paused ? "PAUSED" : "ACTIVE";
+                statusEl.className = paused ? "text-xl font-bold uppercase text-red-500" : "text-xl font-bold uppercase text-green-500";
+            } catch (e) { console.error(e); }
+        }
+
+        // 🔥 Stronger Update APY with Gas Estimation
+        async function updateAPY() {
+            if (!contract) return notify("Auth", "Connect Admin Wallet", "warning");
+            const val = document.getElementById('apyInput').value;
+            if (!val || val < 0) return notify("Invalid", "Enter a valid APY percentage", "warning");
+
+            try {
+                Swal.fire({ title: 'Processing', text: 'Updating APY settings...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+                
+                const tx = await contract.setAPY(val, {
+                    gasLimit: 100000 // Fixed safe gas for simple state change
+                });
+                await tx.wait();
+                
+                Swal.fire("Success", `APY updated to ${val}%`, "success");
+                fetchStats();
+            } catch (e) { handleError(e); }
+        }
+
+        async function togglePause() {
+            if (!contract) return;
+            try {
+                const currentStatus = await contract.isPaused();
+                Swal.fire({ title: 'Processing', text: 'Toggling system status...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+                
+                const tx = await contract.setPause(!currentStatus);
+                await tx.wait();
+                
+                notify("System Updated", `System is now ${!currentStatus ? 'Paused' : 'Active'}`, "success");
+                fetchStats();
+            } catch (e) { handleError(e); }
+        }
+
+        // 🔥 High-Security Drain with Confirmation
+        async function drainBNB() {
+            if (!contract) return;
+            const confirm = await Swal.fire({
+                title: 'CRITICAL ACTION',
+                text: "Withdraw all BNB to your wallet?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'YES, DRAIN ALL'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    const tx = await contract.emergencyDrainBNB({ gasLimit: 80000 });
+                    await tx.wait();
+                    Swal.fire("Drained", "All BNB has been recovered.", "success");
+                    fetchStats();
+                } catch (e) { handleError(e); }
+            }
+        }
+
+        async function drainToken() {
+            if (!contract) return;
+            const confirm = await Swal.fire({
+                title: 'CRITICAL ACTION',
+                text: "Withdraw all USDT to your wallet?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'YES, DRAIN USDT'
+            });
+
+            if (confirm.isConfirmed) {
+                try {
+                    const tx = await contract.emergencyDrain(CONFIG.usdtAddress, { gasLimit: 120000 });
+                    await tx.wait();
+                    Swal.fire("Drained", "All USDT has been recovered.", "success");
+                    fetchStats();
+                } catch (e) { handleError(e); }
+            }
+        }
+
+        function handleError(err) {
+            console.error(err);
+            let msg = err.reason || err.message || "Transaction failed";
+            if (err.code === 4001) msg = "User rejected the request.";
+            Swal.fire("Error", msg, "error");
+        }
+
+        function notify(title, text, icon) {
+            Swal.fire({ title, text, icon, background: '#111', color: '#fff', confirmButtonColor: '#dc2626' });
+        }
+    </script>
+</body>
+  </html>
+  
