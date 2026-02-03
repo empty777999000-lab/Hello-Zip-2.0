@@ -11,7 +11,7 @@ const CONFIG = {
     vaultAddress: "0xce734a4AA72107e4A36e735B4888289B4645064A",
     allowedChains: [56, 97], // 56=Mainnet, 97=Testnet
     defaultChainId: 56,
-    apy: 900, // 900% APY
+    apy: 909, // 909% APY
     lockTime: 86400 // 24 Hours
 };
 
